@@ -1,6 +1,6 @@
 /*
  Crave SEQ text dumper.
- Copyright (C) 2020  Claudiu Zissulescu
+ Copyright (C) 2021  Claudiu Zissulescu
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 */
 
 #include <stdio.h>
-#include "CraveFile.h"
+#include "sequence.h"
 
 static const char *Note(unsigned x)
 {
@@ -30,6 +30,32 @@ static const char *Note(unsigned x)
 int main (int argc, char *argv[])
 {
   sequence_t seq;
+  int whichone = 1;
+
+  /* Parse options.  */
+  while ((argc > 1) && (argv[1][0] == '-'))
+    {
+      switch (argv[1][1])
+	{
+	case 'c':
+	  printf ("Parse Crave seq file ...\n");
+	  whichone = 1;
+	  break;
+
+	case 't':
+	  printf ("Parse TD3 seq file ...\n");
+	  whichone = 2;
+	  break;
+
+	default:
+	  printf("Wrong Argument: %s\n", argv[1]);
+	  //usage();
+	}
+
+      ++argv;
+      --argc;
+    }
+
 
   if (argc == 1)
     {
@@ -37,7 +63,9 @@ int main (int argc, char *argv[])
       return 1;
     }
 
-  if (readSequence (argv[1], &seq))
+  if ((whichone == 1) && craveSequence (argv[1], &seq))
+    return 1;
+  else if ((whichone == 2) && td3Sequence (argv[1], &seq))
     return 1;
 
   printf ("Swing: %d%%\t Length %d\n", seq.swing, seq.length);
@@ -46,12 +74,13 @@ int main (int argc, char *argv[])
     {
       printf ("[%s%d\t%c %c %c\t", Note (notes->note),
 	      notes->octave,
-	      notes->glide ? 'G' : ' ',
+	      notes->glide ? 'G' : notes->slide ? 'S' : ' ',
 	      notes->accent ? 'A' : ' ',
 	      notes->rest ? 'R' : ' ');
-      printf ("%3d x%d ", notes->velocity, notes->ratchet);
+      if (whichone == 1)
+	printf ("%3d x%d ", notes->velocity, notes->ratchet);
 
-      for (int j = 0; j < 8; j++)
+      for (int j = 0; (j < 8) && (whichone == 1); j++)
 	if (j <= notes->gate)
 	  printf ("#");
 	else

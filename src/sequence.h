@@ -1,5 +1,5 @@
 /*
- Crave SEQ file library parser.
+ SEQ file library parser.
  Copyright (C) 2020  Claudiu Zissulescu
 
  This program is free software: you can redistribute it and/or modify
@@ -16,8 +16,8 @@
  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef _CRAVE_FILE_H_
-#define _CRAVE_FILE_H_
+#ifndef _SEQUENCE_FILE_H_
+#define _SEQUENCE_FILE_H_
 
 #include <stdbool.h>
 
@@ -29,8 +29,9 @@ typedef struct note
   unsigned char velocity;
   unsigned char gate;
   bool glide;
+  bool slide;  /* TD3 specific.  */
   bool accent;
-  bool rest;
+  bool rest;   /* TD3's enable. */
 } note_t;
 
 typedef struct sequence
@@ -40,6 +41,7 @@ typedef struct sequence
   note_t *notes;
 } sequence_t;
 
-extern int readSequence (const char *name, sequence_t *sequence);
+extern int craveSequence (const char *, sequence_t *);
+extern int td3Sequence (const char *, sequence_t *);
 
 #endif
