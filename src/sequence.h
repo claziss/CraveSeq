@@ -43,5 +43,6 @@ typedef struct sequence
 
 extern int craveSequence (const char *, sequence_t *);
 extern int td3Sequence (const char *, sequence_t *);
+extern int dumpCraveSeq (const char *, sequence_t *);
 
 #endif

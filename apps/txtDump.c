@@ -17,6 +17,8 @@
 */
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include "sequence.h"
 
 static const char *Note(unsigned x)
@@ -31,6 +33,8 @@ int main (int argc, char *argv[])
 {
   sequence_t seq;
   int whichone = 1;
+  int convert = 0;
+  char *name;
 
   /* Parse options.  */
   while ((argc > 1) && (argv[1][0] == '-'))
@@ -45,6 +49,12 @@ int main (int argc, char *argv[])
 	case 't':
 	  printf ("Parse TD3 seq file ...\n");
 	  whichone = 2;
+	  break;
+
+	case 'd':
+	  printf ("Parse TD3 seq file and convert...\n");
+	  whichone = 2;
+	  convert = 1;
 	  break;
 
 	default:
@@ -63,9 +73,10 @@ int main (int argc, char *argv[])
       return 1;
     }
 
-  if ((whichone == 1) && craveSequence (argv[1], &seq))
+  name = argv[1];
+  if ((whichone == 1) && craveSequence (name, &seq))
     return 1;
-  else if ((whichone == 2) && td3Sequence (argv[1], &seq))
+  else if ((whichone == 2) && td3Sequence (name, &seq))
     return 1;
 
   printf ("Swing: %d%%\t Length %d\n", seq.swing, seq.length);
@@ -89,6 +100,21 @@ int main (int argc, char *argv[])
       notes++;
     }
   printf ("\n");
+
+  if (convert == 1)
+    {
+      int lenName = 0;
+      for (int i = 0; i < strlen (name); i++)
+	if (name[i] != '.')
+	  lenName ++;
+	else
+	  break;
+      char *dumpName = alloca (lenName + strlen (".crave.seq"));
+      memset (dumpName, 0, lenName + 1);
+      strncpy (dumpName, name, lenName);
+      strcat (dumpName, ".crave.seq");
+      dumpCraveSeq (dumpName, &seq);
+    }
 
   return 0;
 }

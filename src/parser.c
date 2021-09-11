@@ -153,7 +153,7 @@ int craveSequence (const char *name, sequence_t *sequence)
     {
       unsigned noteval = cseq->notes[i].note[0] * 0x10 +
          cseq->notes[i].note[1];
-      notes->octave = noteval / 12;
+      notes->octave = noteval / 12 - 1;
       notes->note =  (noteval - notes->octave * 12) % 12;
       notes->velocity = cseq->notes[i].velocity[0] * 0x10
 	+ cseq->notes[i].velocity[1];
@@ -236,6 +236,7 @@ int td3Sequence (const char *name, sequence_t *seq)
 	return 1;
       }
 
+  seq->swing = 50;
   seq->length = tdseq->length[0] * 0x10 + tdseq->length[1];
   note_t *notes = malloc (sizeof (note_t) * seq->length);
   memset (notes, 0, sizeof (note_t) * seq->length);
@@ -256,5 +257,68 @@ int td3Sequence (const char *name, sequence_t *seq)
       mask >>= 1;
       notes++;
     }
+  return 0;
+}
+
+
+int
+dumpCraveSeq (const char *name, sequence_t *seq)
+{
+  FILE *fp;
+
+  fp = fopen (name, "w");
+
+  if (fp == NULL)
+    {
+      printf ("Can't open the file: %s\n", strerror (errno));
+      return 1;
+    }
+
+  fwrite (craveHeader, sizeof (craveHeader), 1, fp);
+
+  /* Write twice 0x00.  */
+  fputc (0x00, fp);
+  fputc (0x00, fp);
+
+  /* Write length in bytes (2 bytes).  */
+  unsigned byteslength = 0x0e + (seq->length - 1) * 8;
+  fputc (byteslength >> 8, fp);
+  fputc (byteslength & 0xff, fp);
+
+  /* Write swing info (2 bytes).  */
+  unsigned swing = seq->swing - 50;
+  fputc (swing / 0x10, fp);
+  fputc (swing % 0x10, fp);
+
+  /* Write sequence length (4 bytes).  */
+  unsigned seqlength = seq->length - 1;
+  fputc (0x00, fp);
+  fputc (seqlength / 8, fp);
+  fputc (0x00, fp);
+  fputc (seqlength % 8, fp);
+
+  /* Write notes (&info) (8 bytes).  */
+  note_t *notes = seq->notes;
+  for (int i = 0; i < seq->length; i++)
+    {
+       //TD3 correction: TD3 Octave starts from 0/ Crave starts from -1
+      unsigned noteval = notes->note + 12 * (notes->octave + 1);
+      fputc (noteval / 0x10, fp);
+      fputc (noteval % 0x10, fp);
+
+      fputc (0x4, fp); //fputc (seq->notes->gate, fp);
+      fputc (seq->notes->ratchet, fp);
+      fputc (0x4, fp);  //fputc (seq->notes->velocity / 0x10, fp);
+      fputc (0x0, fp);  //fputc (seq->notes->velocity % 0x10, fp);
+
+      unsigned effects = notes->slide | (notes->accent << 2)
+	| (notes->rest << 3);
+      fputc (effects, fp);
+      fputc (0x00, fp);
+      notes ++;
+    }
+
+
+  fclose (fp);
   return 0;
 }
