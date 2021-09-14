@@ -229,7 +229,7 @@ int td3Sequence (const char *name, sequence_t *seq)
 
   td3SeqRaw_t *tdseq = (td3SeqRaw_t *) buffer;
 
-  for (int i = 0; i < 32; i ++)
+  for (int i = 0; i < 16; i ++)
     if (tdseq->header[i] != td3Header[i])
       {
 	printf ("Unknown header\n");
@@ -306,7 +306,9 @@ dumpCraveSeq (const char *name, sequence_t *seq)
       fputc (noteval / 0x10, fp);
       fputc (noteval % 0x10, fp);
 
-      fputc (0x4, fp); //fputc (seq->notes->gate, fp);
+      // Slide fully opens the gate.
+      unsigned gate = notes->slide ? 0x07 : 0x03;
+      fputc (gate, fp); //fputc (seq->notes->gate, fp);
       fputc (seq->notes->ratchet, fp);
       fputc (0x4, fp);  //fputc (seq->notes->velocity / 0x10, fp);
       fputc (0x0, fp);  //fputc (seq->notes->velocity % 0x10, fp);
