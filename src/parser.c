@@ -58,7 +58,7 @@ typedef struct td3SeqRaw
   unsigned char length[2];
   unsigned char fillzero2[2];
   unsigned char mask[4];
-  unsigned char fillzero3[4];
+  unsigned char rest[4];
 } td3SeqRaw_t;
 
 const unsigned char craveHeader[] =
@@ -192,9 +192,9 @@ int craveSequence (const char *name, sequence_t *sequence)
  *  - Slide (S): 1 - on, 0 - off
  *
  * 0000008x: 0000 0003 0000 0007 0000 0006 0000
- *                 ^          ^    ^   ^
- *                 |          |    |   Unk
- *                 |          +----+--- Mask enabled notes (1bit lsb, negated)
+ *                 ^          ^    ^   ^    ^
+ *                 |          |    |   +----+-- Rest
+ *                 |          +----+--- Mask
  *                 +--- Seq length
  */
 
@@ -244,7 +244,8 @@ int td3Sequence (const char *name, sequence_t *seq)
 
   unsigned int mask = tdseq->mask[1] + (tdseq->mask[0] << 4)
     + (tdseq->mask[3] << 8) + (tdseq->mask[2] << 12);
-  mask = ~mask;
+  unsigned int rest = tdseq->rest[1] + (tdseq->rest[0] << 4)
+    + (tdseq->rest[3] << 8) + (tdseq->rest[2] << 12);
   for (int i = 0; i < seq->length*2 ; i += 2)
     {
       unsigned noteval = tdseq->notes[i] * 0x10 +
@@ -253,8 +254,8 @@ int td3Sequence (const char *name, sequence_t *seq)
       notes->note =  (noteval - notes->octave * 12) % 12;
       notes->slide = tdseq->slides[i+1] & 0x01;
       notes->accent = tdseq->accents[i+1] & 0x01;
-      notes->rest = mask & 0x01;
-      mask >>= 1;
+      notes->rest = rest & 0x01;
+      rest >>= 1;
       notes++;
     }
   return 0;
