@@ -193,8 +193,8 @@ int craveSequence (const char *name, sequence_t *sequence)
  *
  * 0000008x: 0000 0003 0000 0007 0000 0006 0000
  *                 ^          ^    ^   ^    ^
- *                 |          |    |   +----+-- Rest
- *                 |          +----+--- Mask
+ *                 |          |    |   +----+-- Rest (note time)
+ *                 |          +----+--- note time (1 - play next pitch, 0 - sustain last pitch)
  *                 +--- Seq length
  */
 
@@ -212,7 +212,7 @@ int td3Sequence (const char *name, sequence_t *seq)
       printf ("Can't open the file: %s\n", strerror (errno));
       return 1;
     }
-
+ 
   fseek (fd, 0L, SEEK_END);
   fileSize = ftell (fd);
   rewind (fd);
@@ -246,15 +246,24 @@ int td3Sequence (const char *name, sequence_t *seq)
     + (tdseq->mask[3] << 8) + (tdseq->mask[2] << 12);
   unsigned int rest = tdseq->rest[1] + (tdseq->rest[0] << 4)
     + (tdseq->rest[3] << 8) + (tdseq->rest[2] << 12);
-  for (int i = 0; i < seq->length*2 ; i += 2)
+  note_t *stash;
+  for (int i = 0, j = 0; i < seq->length ; i ++)
     {
-      unsigned noteval = tdseq->notes[i] * 0x10 +
-	tdseq->notes[i+1];
-      notes->octave = noteval / 12;
-      notes->note =  (noteval - notes->octave * 12) % 12;
-      notes->slide = tdseq->slides[i+1] & 0x01;
-      notes->accent = tdseq->accents[i+1] & 0x01;
-      notes->rest = rest & 0x01;
+      if (mask & 0x1)
+	{
+	  unsigned noteval = tdseq->notes[j] * 0x10 +
+	    tdseq->notes[j+1];
+	  notes->octave = noteval / 12;
+	  notes->note =  (noteval - notes->octave * 12) % 12;
+	  notes->slide = tdseq->slides[j+1] & 0x01;
+	  notes->accent = tdseq->accents[j+1] & 0x01;
+	  notes->rest = rest & 0x01;
+	  j += 2;
+	  stash = notes;
+	}
+      else // sustain last note
+	memcpy (notes, stash, sizeof (note_t));
+      mask >>= 1;
       rest >>= 1;
       notes++;
     }
