@@ -84,7 +84,7 @@ int main (int argc, char *argv[])
   for (int i = 0; i < seq.length; i++)
     {
       printf ("[%s%d\t%c %c %c\t", Note (notes->note),
-	      notes->octave,
+	      (notes->octave + (notes->note + 3) / 12),
 	      notes->glide ? 'G' : notes->slide ? 'S' : ' ',
 	      notes->accent ? 'A' : ' ',
 	      notes->rest ? 'R' : ' ');
