@@ -251,8 +251,8 @@ int td3Sequence (const char *name, sequence_t *seq)
 	tdseq->notes[i+1];
       notes->octave = noteval / 12;
       notes->note =  (noteval - notes->octave * 12) % 12;
-      notes->slide = tdseq->accents[i+1] & 0x01;
-      notes->accent = tdseq->slides[i+1] & 0x01;
+      notes->slide = tdseq->slides[i+1] & 0x01;
+      notes->accent = tdseq->accents[i+1] & 0x01;
       notes->rest = mask & 0x01;
       mask >>= 1;
       notes++;
