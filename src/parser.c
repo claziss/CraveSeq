@@ -247,6 +247,9 @@ int td3Sequence (const char *name, sequence_t *seq)
   unsigned int rest = tdseq->rest[1] + (tdseq->rest[0] << 4)
     + (tdseq->rest[3] << 8) + (tdseq->rest[2] << 12);
   note_t *stash = alloca (sizeof (note_t));
+
+  // Create a guard bit.
+  mask |= (1LL << (seq->length));
   for (int i = 0, j = 0; i < seq->length; i ++)
     {
       if (mask & 0x1)
