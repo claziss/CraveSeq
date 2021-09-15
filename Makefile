@@ -1,7 +1,13 @@
 all: txtdump
 
-txtdump: apps/txtDump.c src/parser.c
-	$(CC) -O2 $? -o $@ -Isrc/
+parser.o: src/parser.c
+	$(CC) -c -O2 $< -o $@ -Isrc/
+
+txtdump.o: apps/txtDump.c
+	$(CC) -c -O2 $< -o $@ -Isrc/
+
+txtdump: txtdump.o parser.o
+	$(CC) -O2 $^ -o $@ -Isrc/
 
 clean:
-	rm txtdump
+	rm -rf txtdump *.o

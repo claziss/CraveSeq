@@ -212,7 +212,7 @@ int td3Sequence (const char *name, sequence_t *seq)
       printf ("Can't open the file: %s\n", strerror (errno));
       return 1;
     }
- 
+
   fseek (fd, 0L, SEEK_END);
   fileSize = ftell (fd);
   rewind (fd);
@@ -246,8 +246,8 @@ int td3Sequence (const char *name, sequence_t *seq)
     + (tdseq->mask[3] << 8) + (tdseq->mask[2] << 12);
   unsigned int rest = tdseq->rest[1] + (tdseq->rest[0] << 4)
     + (tdseq->rest[3] << 8) + (tdseq->rest[2] << 12);
-  note_t *stash;
-  for (int i = 0, j = 0; i < seq->length ; i ++)
+  note_t *stash = alloca (sizeof (note_t));
+  for (int i = 0, j = 0; i < seq->length; i ++)
     {
       if (mask & 0x1)
 	{
@@ -258,12 +258,25 @@ int td3Sequence (const char *name, sequence_t *seq)
 	  notes->slide = tdseq->slides[j+1] & 0x01;
 	  notes->accent = tdseq->accents[j+1] & 0x01;
 	  notes->rest = rest & 0x01;
+	  // Slide fully opens the gate.
+	  unsigned gate = notes->slide ? 0x07 : 0x03;
+	  notes->gate = gate;
 	  j += 2;
-	  stash = notes;
+	  memcpy (stash, notes, sizeof (note_t));
 	}
       else // sustain last note
-	memcpy (notes, stash, sizeof (note_t));
+	{
+	  // TODO: Crave seq has a ratchet, can be used?
+	  memcpy (notes, stash, sizeof (note_t));
+	}
       mask >>= 1;
+      // Check if this note is a sustain one.
+      if ((mask & 0x01) == 0)
+	{
+	  // Fully open the gate of the previous note.
+	  notes->gate = 0x07; //FIXME! Shall I set the slide too?
+	}
+
       rest >>= 1;
       notes++;
     }
@@ -311,25 +324,27 @@ dumpCraveSeq (const char *name, sequence_t *seq)
   note_t *notes = seq->notes;
   for (int i = 0; i < seq->length; i++)
     {
-       //TD3 correction: TD3 Octave starts from 0/ Crave starts from -1
+      //TD3 correction: TD3 Octave starts from 0/ Crave starts from -1
       unsigned noteval = notes->note + 12 * (notes->octave + 1);
       fputc (noteval / 0x10, fp);
       fputc (noteval % 0x10, fp);
 
-      // Slide fully opens the gate.
-      unsigned gate = notes->slide ? 0x07 : 0x03;
-      fputc (gate, fp); //fputc (seq->notes->gate, fp);
-      fputc (seq->notes->ratchet, fp);
+      fputc (notes->gate, fp);
+      fputc (notes->ratchet, fp);
       fputc (0x4, fp);  //fputc (seq->notes->velocity / 0x10, fp);
       fputc (0x0, fp);  //fputc (seq->notes->velocity % 0x10, fp);
 
+      // TB3 slide is like Crave's glide, see
+      // https://www.firstpr.com.au/rwi/dfish/303-slide.html
+      // Other TB3 info:
+      // https://www.firstpr.com.au/rwi/dfish/303-unique.html
+      // https://www.tinyloops.com/tb303/pattern_write.html
       unsigned effects = notes->slide | (notes->accent << 2)
 	| (notes->rest << 3);
       fputc (effects, fp);
       fputc (0x00, fp);
       notes ++;
     }
-
 
   fclose (fp);
   return 0;

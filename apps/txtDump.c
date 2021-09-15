@@ -91,7 +91,7 @@ int main (int argc, char *argv[])
       if (whichone == 1)
 	printf ("%3d x%d ", notes->velocity, notes->ratchet);
 
-      for (int j = 0; (j < 8) && (whichone == 1); j++)
+      for (int j = 0; j < 8; j++)
 	if (j <= notes->gate)
 	  printf ("#");
 	else
