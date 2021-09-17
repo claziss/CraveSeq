@@ -54,10 +54,10 @@ typedef struct td3SeqRaw
   unsigned char notes[32];
   unsigned char accents[32];
   unsigned char slides[32];
-  unsigned char fillzero1[2];
+  unsigned char triplet[2];
   unsigned char length[2];
-  unsigned char fillzero2[2];
-  unsigned char mask[4];
+  unsigned char reserved[2];
+  unsigned char tie[4];
   unsigned char rest[4];
 } td3SeqRaw_t;
 
@@ -192,10 +192,12 @@ int craveSequence (const char *name, sequence_t *sequence)
  *  - Slide (S): 1 - on, 0 - off
  *
  * 0000008x: 0000 0003 0000 0007 0000 0006 0000
- *                 ^          ^    ^   ^    ^
- *                 |          |    |   +----+-- Rest (note time)
- *                 |          +----+--- note time (1 - play next pitch, 0 - sustain last pitch)
- *                 +--- Seq length
+ *            ^    ^    ^     ^    ^   ^    ^
+ *            |    |    |     |    |   +----+-- Rest (note time)
+ *            |    |    |     +----+--- note time (1 - play next pitch, 0 - sustain last pitch)
+ *            |    |    +---------- Reserved
+ *            |    +--- Seq length
+ *            +---- Triplets (0x0001 yes)
  */
 
 int td3Sequence (const char *name, sequence_t *seq)
@@ -242,17 +244,17 @@ int td3Sequence (const char *name, sequence_t *seq)
   memset (notes, 0, sizeof (note_t) * seq->length);
   seq->notes = notes;
 
-  unsigned int mask = tdseq->mask[1] + (tdseq->mask[0] << 4)
-    + (tdseq->mask[3] << 8) + (tdseq->mask[2] << 12);
+  unsigned int tie = tdseq->tie[1] + (tdseq->tie[0] << 4)
+    + (tdseq->tie[3] << 8) + (tdseq->tie[2] << 12);
   unsigned int rest = tdseq->rest[1] + (tdseq->rest[0] << 4)
     + (tdseq->rest[3] << 8) + (tdseq->rest[2] << 12);
   note_t *stash = alloca (sizeof (note_t));
 
   // Create a guard bit.
-  mask |= (1LL << (seq->length));
+  tie |= (1LL << (seq->length));
   for (int i = 0, j = 0; i < seq->length; i ++)
     {
-      if (mask & 0x1)
+      if (tie & 0x1)
 	{
 	  unsigned noteval = tdseq->notes[j] * 0x10 +
 	    tdseq->notes[j+1];
@@ -272,9 +274,9 @@ int td3Sequence (const char *name, sequence_t *seq)
 	  // TODO: Crave seq has a ratchet, can be used?
 	  memcpy (notes, stash, sizeof (note_t));
 	}
-      mask >>= 1;
+      tie >>= 1;
       // Check if this note is a sustain one.
-      if ((mask & 0x01) == 0)
+      if ((tie & 0x01) == 0)
 	{
 	  // Fully open the gate of the previous note.
 	  notes->gate = 0x07; //FIXME! Shall I set the slide too?
